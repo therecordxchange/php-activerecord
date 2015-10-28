@@ -461,8 +461,12 @@ class Table
 
 	private function set_table_name()
 	{
-		if (($table = $this->class->getStaticPropertyValue('table',null)) || ($table = $this->class->getStaticPropertyValue('table_name',null)))
+		if (($table = $this->class->getStaticPropertyValue('table',null)) || ($table = $this->class->getStaticPropertyValue('table_name',null))) {
 			$this->table = $table;
+			if(defined('DB_PREFIX')) {
+				$this->table = DB_PREFIX . $table;
+			}	
+		}
 		else
 		{
 			// infer table name from the class name
