@@ -3,7 +3,7 @@
  * @package ActiveRecord
  */
 namespace ActiveRecord;
-
+require("Expressions.php");
 /**
  * Helper class for building sql statements progmatically.
  *
