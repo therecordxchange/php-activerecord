@@ -60,7 +60,7 @@ class Table
 	/**
 	 * List of relationships for this table.
 	 */
-	private $relationships = array();
+	public $relationships = array();
 
 	public static function load($model_class_name)
 	{
@@ -286,7 +286,7 @@ class Table
 			// nested include
 			if (is_array($name))
 			{
-				$nested_includes = count($name) > 0 ? $name : $name[0];
+				$nested_includes = count($name) > 0 ? $name : array();
 				$name = $index;
 			}
 			else
@@ -328,9 +328,12 @@ class Table
 	 */
 	public function get_relationship($name, $strict=false)
 	{
-		if ($this->has_relationship($name))
-			return $this->relationships[$name];
 
+		if ($this->has_relationship($name)) {
+                    //print "<pre>has rel:$name"; print_r($this->relationships[$name]);
+			return $this->relationships[$name];
+                }
+                
 		if ($strict)
 			throw new RelationshipException("Relationship named $name has not been declared for class: {$this->class->getName()}");
 
@@ -428,9 +431,10 @@ class Table
 		if (!$hash)
 			return $hash;
 
+		$date_class = Config::instance()->get_date_class();
 		foreach ($hash as $name => &$value)
 		{
-			if ($value instanceof \DateTime)
+			if ($value instanceof $date_class || $value instanceof \DateTime)
 			{
 				if (isset($this->columns[$name]) && $this->columns[$name]->type == Column::DATE)
 					$hash[$name] = $this->conn->date_to_string($value);
@@ -461,8 +465,12 @@ class Table
 
 	private function set_table_name()
 	{
-		if (($table = $this->class->getStaticPropertyValue('table',null)) || ($table = $this->class->getStaticPropertyValue('table_name',null)))
+		if (($table = $this->class->getStaticPropertyValue('table',null)) || ($table = $this->class->getStaticPropertyValue('table_name',null))) {
 			$this->table = $table;
+			if(defined('DB_PREFIX')) {
+				$this->table = DB_PREFIX . $table;
+			}	                        
+                }
 		else
 		{
 			// infer table name from the class name
@@ -536,7 +544,7 @@ class Table
 						$relationship = new HasAndBelongsToMany($definition);
 						break;
 				}
-
+//print "<pre>relationship:"; print_r($relationship); print "<pre>definition:"; print_r($definition);
 				if ($relationship)
 					$this->add_relationship($relationship);
 			}

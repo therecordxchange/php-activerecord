@@ -180,33 +180,35 @@ abstract class AbstractRelationship implements InterfaceRelationship
 		$class = $this->class_name;
 
 		$related_models = $class::find('all', $options);
-		$used_models = array();
+		$used_models_map = array();
+		$related_models_map = array();
 		$model_values_key = $inflector->variablize($model_values_key);
 		$query_key = $inflector->variablize($query_key);
 
+		foreach ($related_models as $related)
+		{
+			$related_models_map[$related->$query_key][] = $related;
+		}
+
 		foreach ($models as $model)
 		{
-			$matches = 0;
 			$key_to_match = $model->$model_values_key;
 
-			foreach ($related_models as $related)
-			{
-				if ($related->$query_key == $key_to_match)
+			if (isset($related_models_map[$key_to_match])) {
+				foreach ($related_models_map[$key_to_match] as $related)
 				{
 					$hash = spl_object_hash($related);
 
-					if (in_array($hash, $used_models))
+					if (isset($used_models_map[$hash]))
 						$model->set_relationship_from_eager_load(clone($related), $this->attribute_name);
 					else
 						$model->set_relationship_from_eager_load($related, $this->attribute_name);
 
-					$used_models[] = $hash;
-					$matches++;
+					$used_models_map[$hash] = true;
 				}
-			}
-
-			if (0 === $matches)
+			} else {
 				$model->set_relationship_from_eager_load(null, $this->attribute_name);
+			}
 		}
 	}
 
@@ -302,7 +304,7 @@ abstract class AbstractRelationship implements InterfaceRelationship
 	{
 		$condition_string = implode('_and_', $condition_keys);
 		$condition_values = array_values($model->get_values_for($value_keys));
-
+                
 		// return null if all the foreign key values are null so that we don't try to do a query like "id is null"
 		if (all(null,$condition_values))
 			return null;
@@ -340,7 +342,7 @@ abstract class AbstractRelationship implements InterfaceRelationship
 			$join_table_name = $join_table->get_fully_qualified_table_name();
 			$from_table_name = $from_table->get_fully_qualified_table_name();
 		}
-
+                
 		// need to flip the logic when the key is on the other table
 		if ($this instanceof HasMany || $this instanceof HasOne)
 		{
@@ -348,8 +350,10 @@ abstract class AbstractRelationship implements InterfaceRelationship
 
 			if ($using_through)
 			{
-				$foreign_key = $this->primary_key[0];
-				$join_primary_key = $this->foreign_key[0];
+				//$foreign_key = $this->primary_key[0];
+				//$join_primary_key = $this->foreign_key[0];
+                                $foreign_key = $this->foreign_key[0];
+                                $join_primary_key = $join_table->pk[0];
 			}
 			else
 			{
@@ -371,7 +375,12 @@ abstract class AbstractRelationship implements InterfaceRelationship
 		else
 			$aliased_join_table_name = $join_table_name;
 
-		return "INNER JOIN $join_table_name {$alias}ON($from_table_name.$foreign_key = $aliased_join_table_name.$join_primary_key)";
+                $sql = "INNER JOIN $join_table_name {$alias}ON($from_table_name.$foreign_key = $aliased_join_table_name.$join_primary_key)";
+                
+                if(!empty($this->options['class_name']) && (denamespace($from_table->class->getName()) == denamespace($this->options['class_name'])) && $using_through) {
+                    $sql = "INNER JOIN $from_table_name {$alias}ON($from_table_name.$foreign_key = $aliased_join_table_name.$join_primary_key)";
+                }
+                return $sql;
 	}
 
 	/**
@@ -504,13 +513,20 @@ class HasMany extends AbstractRelationship
 				$pk = $this->primary_key;
 				$fk = $this->foreign_key;
 
-				$this->set_keys($this->get_table()->class->getName(), true);
-				
+                                $this->set_keys($this->get_table()->class->getName());
+			
 				$class = $this->class_name;
+
 				$relation = $class::table()->get_relationship($this->through);
 				$through_table = $relation->get_table();
+                                
 				$this->options['joins'] = $this->construct_inner_join_sql($through_table, true);
-
+                                
+                                //if the class_name is defined in the options, return results of the class_name::$find() in the options['class_name'] class.
+                                if(!empty($this->options['class_name'])) {
+                                    $class_name = $this->options['class_name'];
+                                }
+                                
 				// reset keys
 				$this->primary_key = $pk;
 				$this->foreign_key = $fk;
@@ -519,11 +535,21 @@ class HasMany extends AbstractRelationship
 			$this->initialized = true;
 		}
 
-		if (!($conditions = $this->create_conditions_from_keys($model, $this->foreign_key, $this->primary_key)))
-			return null;
+                if ($this->through) {
+                    //use the pk of the primary table
+                    $conditions = $this->create_conditions_from_keys($model, $this->primary_key, $model->table()->pk);
+                }
+                else {
+                    $conditions = $this->create_conditions_from_keys($model, $this->foreign_key, $this->primary_key);
+                }
+
+                if(!$conditions) {
+                    return null;
+                }
 
 		$options = $this->unset_non_finder_options($this->options);
 		$options['conditions'] = $conditions;
+           
 		return $class_name::find($this->poly_relationship ? 'all' : 'first',$options);
 	}
 
