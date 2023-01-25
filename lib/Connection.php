@@ -76,6 +76,7 @@ abstract class Connection
 		PDO::ATTR_CASE => PDO::CASE_LOWER,
 		PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
 		PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL,
+		PDO::ATTR_EMULATE_PREPARES => false,
 		PDO::ATTR_STRINGIFY_FETCHES => false);
 	/**
 	 * The quote character for stuff like column and field names.
