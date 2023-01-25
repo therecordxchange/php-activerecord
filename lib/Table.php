@@ -467,9 +467,7 @@ class Table
 	{
 		if (($table = $this->class->getStaticPropertyValue('table',null)) || ($table = $this->class->getStaticPropertyValue('table_name',null))) {
 			$this->table = $table;
-			if(defined('DB_PREFIX')) {
-				$this->table = DB_PREFIX . $table;
-			}	                        
+         
                 }
 		else
 		{
