@@ -227,8 +227,11 @@ abstract class Connection
 
 		if (isset($url['query']))
 		{
-			foreach (explode('/&/', $url['query']) as $pair) {
-				list($name, $value) = explode('=', $pair);
+			foreach (explode('&', $url['query']) as $pair) {
+				if (strpos($pair, '=') === false)
+					continue;
+
+				list($name, $value) = explode('=', $pair, 2);
 
 				if ($name == 'charset')
 					$info->charset = $value;
