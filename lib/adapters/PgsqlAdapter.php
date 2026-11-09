@@ -42,13 +42,14 @@ SELECT
       a.attlen,
       REPLACE(pg_catalog.format_type(a.atttypid, a.atttypmod), 'character varying', 'varchar') AS type,
       a.attnotnull AS not_nullable,
+      a.attidentity AS identity_type,
       (SELECT 't'
         FROM pg_index
         WHERE c.oid = pg_index.indrelid
         AND a.attnum = ANY (pg_index.indkey)
         AND pg_index.indisprimary = 't'
       ) IS NOT NULL AS pk,      
-      REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE((SELECT pg_attrdef.adsrc
+      REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE((SELECT pg_get_expr(pg_attrdef.adbin, pg_attrdef.adrelid)
         FROM pg_attrdef
         WHERE c.oid = pg_attrdef.adrelid
         AND pg_attrdef.adnum=a.attnum
@@ -76,7 +77,7 @@ SQL;
 		$c->name			= $column['field'];
 		$c->nullable		= ($column['not_nullable'] ? false : true);
 		$c->pk				= ($column['pk'] ? true : false);
-		$c->auto_increment	= false;
+		$c->auto_increment	= (isset($column['identity_type']) && $column['identity_type'] !== '');
 
 		if (substr($column['type'],0,9) == 'timestamp')
 		{

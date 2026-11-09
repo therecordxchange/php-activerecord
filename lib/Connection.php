@@ -232,6 +232,8 @@ abstract class Connection
 
 				if ($name == 'charset')
 					$info->charset = $value;
+				if ($name == 'search_path')
+					$info->options = "'-c search_path=" . $value . "'";
 			}
 		}
 
@@ -258,7 +260,11 @@ abstract class Connection
 			else
 				$host = "unix_socket=$info->host";
 
-			$this->connection = new PDO("$info->protocol:$host;dbname=$info->db", $info->user, $info->pass, static::$PDO_OPTIONS);
+			$dsn = "$info->protocol:$host;dbname=$info->db";
+			if ($info->protocol === "pgsql" && isset($info->options)) {
+				$dsn .= ";options=" . $info->options;
+			}
+			$this->connection = new PDO($dsn, $info->user, $info->pass, static::$PDO_OPTIONS);
 		} catch (PDOException $e) {
 			throw new DatabaseException($e);
 		}
