@@ -492,7 +492,8 @@ abstract class Connection
 	public function string_to_datetime($string)
 	{
 		$date = date_create($string);
-		$errors = \DateTime::getLastErrors();
+		// PHP 8.2+: getLastErrors() returns false when there were no warnings/errors
+		$errors = \DateTime::getLastErrors() ?: array('warning_count' => 0, 'error_count' => 0);
 
 		if ($errors['warning_count'] > 0 || $errors['error_count'] > 0)
 			return null;
