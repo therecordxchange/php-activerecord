@@ -76,5 +76,18 @@ class ConnectionTest extends SnakeCase_PHPUnit_Framework_TestCase
 		$info = ActiveRecord\Connection::parse_connection_url('mysql://test:test@127.0.0.1/test?charset=utf8');
 		$this->assert_equals('utf8', $info->charset);
 	}
+
+	public function test_parse_connection_url_with_multiple_query_options()
+	{
+		$info = ActiveRecord\Connection::parse_connection_url('pgsql://test:test@127.0.0.1/test?charset=utf8&search_path=foo');
+		$this->assert_equals('utf8', $info->charset);
+		$this->assert_equals("'-c search_path=foo'", $info->options);
+	}
+
+	public function test_parse_connection_url_ignores_query_option_without_value()
+	{
+		$info = ActiveRecord\Connection::parse_connection_url('mysql://test:test@127.0.0.1/test?flag&charset=utf8');
+		$this->assert_equals('utf8', $info->charset);
+	}
 }
 ?>

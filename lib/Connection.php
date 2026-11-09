@@ -227,11 +227,16 @@ abstract class Connection
 
 		if (isset($url['query']))
 		{
-			foreach (explode('/&/', $url['query']) as $pair) {
-				list($name, $value) = explode('=', $pair);
+			foreach (explode('&', $url['query']) as $pair) {
+				if (strpos($pair, '=') === false)
+					continue;
+
+				list($name, $value) = explode('=', $pair, 2);
 
 				if ($name == 'charset')
 					$info->charset = $value;
+				if ($name == 'search_path')
+					$info->options = "'-c search_path=" . $value . "'";
 			}
 		}
 
@@ -258,7 +263,11 @@ abstract class Connection
 			else
 				$host = "unix_socket=$info->host";
 
-			$this->connection = new PDO("$info->protocol:$host;dbname=$info->db", $info->user, $info->pass, static::$PDO_OPTIONS);
+			$dsn = "$info->protocol:$host;dbname=$info->db";
+			if ($info->protocol === "pgsql" && isset($info->options)) {
+				$dsn .= ";options=" . $info->options;
+			}
+			$this->connection = new PDO($dsn, $info->user, $info->pass, static::$PDO_OPTIONS);
 		} catch (PDOException $e) {
 			throw new DatabaseException($e);
 		}
@@ -486,7 +495,8 @@ abstract class Connection
 	public function string_to_datetime($string)
 	{
 		$date = date_create($string);
-		$errors = \DateTime::getLastErrors();
+		// PHP 8.2+: getLastErrors() returns false when there were no warnings/errors
+		$errors = \DateTime::getLastErrors() ?: array('warning_count' => 0, 'error_count' => 0);
 
 		if ($errors['warning_count'] > 0 || $errors['error_count'] > 0)
 			return null;

@@ -454,6 +454,7 @@ class HasMany extends AbstractRelationship
 
 	private $has_one = false;
 	private $through;
+	protected $initialized;
 
 	/**
 	 * Constructs a {@link HasMany} relationship.
@@ -707,6 +708,8 @@ class HasAndBelongsToMany extends AbstractRelationship
  * @see valid_association_options
  * @see http://www.phpactiverecord.org/guides/associations
  */
+// primary_key is lazily created as a dynamic property by __get(); declaring it would bypass __get()
+#[\AllowDynamicProperties]
 class BelongsTo extends AbstractRelationship
 {
 	public function __construct($options=array())
